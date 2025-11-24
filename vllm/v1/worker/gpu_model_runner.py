@@ -2277,6 +2277,54 @@ class GPUModelRunner(
             pooler_output=pooler_output,
         )
 
+    def _should_extract_hidden_states(self) -> bool:
+        """Return True if any request is asking for hidden-state extraction."""
+        for req_id in self.input_batch.req_ids:
+            if req_id is None:
+                continue
+            req_state = self.requests.get(req_id)
+            if req_state is None:
+                continue
+            sp = req_state.sampling_params
+            if sp is not None and getattr(sp, "extract_hidden_states", False):
+                return True
+        return False
+
+    def _extract_hidden_states_as_pooling(
+        self,
+        hidden_states: torch.Tensor,
+        logits_indices: torch.Tensor,
+        num_scheduled_tokens: int,
+        num_scheduled_tokens_np: np.ndarray,
+    ) -> ModelRunnerOutput:
+        """Treat the last-token hidden states like pooling outputs."""
+        # Only keep the scheduled tokens to match pooling behavior.
+        hidden_states = hidden_states[:num_scheduled_tokens]
+        assert self.input_batch.num_reqs == len(num_scheduled_tokens_np)
+
+        sample_hidden_states = hidden_states[logits_indices].cpu()
+        assert sample_hidden_states.shape[0] == self.input_batch.num_reqs
+
+        pooler_output: list[torch.Tensor | None] = []
+        for req_idx in range(self.input_batch.num_reqs):
+            pooler_output.append(sample_hidden_states[req_idx])
+
+        req_ids_output_copy = self.input_batch.req_ids[: self.input_batch.num_reqs]
+        req_id_to_index_output_copy = {
+            req_id: idx for idx, req_id in enumerate(req_ids_output_copy)
+        }
+
+        return ModelRunnerOutput(
+            req_ids=req_ids_output_copy,
+            req_id_to_index=req_id_to_index_output_copy,
+            sampled_token_ids=[
+                np.array([], dtype=np.int32) for _ in range(self.input_batch.num_reqs)
+            ],
+            logprobs=None,
+            prompt_logprobs_dict={},
+            pooler_output=pooler_output,
+        )
+
     def _get_num_input_tokens(self, num_scheduled_tokens: int) -> int:
         if (
             self.compilation_config.cudagraph_mode != CUDAGraphMode.NONE
@@ -2827,6 +2875,18 @@ class GPUModelRunner(
                     output = self._pool(
                         hidden_states, num_scheduled_tokens, num_scheduled_tokens_np
                     )
+                    output.kv_connector_output = kv_connector_output
+                    return output
+
+                if self._should_extract_hidden_states():
+                    logger.warning(f"[DEBUG model_runner] extract_hidden_states triggered, num_reqs={self.input_batch.num_reqs}")
+                    output = self._extract_hidden_states_as_pooling(
+                        hidden_states,
+                        logits_indices,
+                        num_scheduled_tokens,
+                        num_scheduled_tokens_np,
+                    )
+                    logger.warning(f"[DEBUG model_runner] returning pooler_output with {len(output.pooler_output)} items")
                     output.kv_connector_output = kv_connector_output
                     return output
 

@@ -1053,8 +1053,10 @@ class Scheduler(SchedulerInterface):
 
             # Stop checking for pooler models.
             pooler_output = None
+            logger.warning(f"[DEBUG scheduler] req_id={req_id}, pooler_outputs truthy={bool(pooler_outputs)}, len={len(pooler_outputs) if pooler_outputs else 0}")
             if pooler_outputs:
                 pooler_output = pooler_outputs[req_index]
+                logger.warning(f"[DEBUG scheduler] pooler_output for req_index={req_index}: {type(pooler_output)}, is_none={pooler_output is None}")
                 stopped = check_stop(request, self.max_model_len, pooler_output)
 
             if stopped:

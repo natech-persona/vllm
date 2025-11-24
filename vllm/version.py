@@ -6,9 +6,9 @@ try:
 except Exception as e:
     import warnings
 
-    warnings.warn(f"Failed to read commit hash:\n{e}", RuntimeWarning, stacklevel=2)
+    # warnings.warn(f"Failed to read commit hash:\n{e}", RuntimeWarning, stacklevel=2)
 
-    __version__ = "dev"
+    __version__ = "cursive_fork_of_vllm_at_v0_11_2"
     __version_tuple__ = (0, 0, __version__)
 
 

@@ -266,13 +266,23 @@ class RequestState:
         first_output = outputs[0]
         if isinstance(first_output, PoolingOutput):
             assert len(outputs) == 1
-            # Prompt embeddings are currently not supported by pooling requests.
-            assert self.prompt_token_ids is not None
+            prompt_token_ids = self.prompt_token_ids
+            if prompt_token_ids is None:
+                if self.prompt_embeds is None:
+                    raise ValueError(
+                        "Pooling outputs require either prompt token ids or prompt "
+                        "embeddings to infer prompt length."
+                    )
+                if hasattr(self.prompt_embeds, "size"):
+                    prompt_len = int(self.prompt_embeds.size(0))
+                else:
+                    prompt_len = len(self.prompt_embeds)  # type: ignore[arg-type]
+                prompt_token_ids = [0] * prompt_len
             return PoolingRequestOutput(
                 request_id=request_id,
                 outputs=first_output,
                 num_cached_tokens=self.num_cached_tokens,
-                prompt_token_ids=self.prompt_token_ids,
+                prompt_token_ids=prompt_token_ids,
                 finished=finished,
             )
         assert self.logprobs_processor is not None

@@ -71,7 +71,12 @@ class Request:
         elif sampling_params is not None:
             # Generative models.
             assert sampling_params.max_tokens is not None
-            self.max_tokens = sampling_params.max_tokens
+            # For extract_hidden_states mode, we need at least 1 token slot
+            # to run the forward pass, even though we won't actually sample.
+            if getattr(sampling_params, "extract_hidden_states", False):
+                self.max_tokens = 1
+            else:
+                self.max_tokens = sampling_params.max_tokens
             if self.structured_output_request is not None:
                 self.status = RequestStatus.WAITING_FOR_FSM
 

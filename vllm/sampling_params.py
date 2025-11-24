@@ -213,6 +213,17 @@ class SamplingParams(
     """Whether to skip special tokens in the output."""
     spaces_between_special_tokens: bool = True
     """Whether to add spaces between special tokens in the output."""
+    extract_hidden_states: bool = False
+    """Extract hidden states of the last prompt token instead of generating.
+
+    When set to True, the model will:
+        1. Process the prompt through all layers.
+        2. Extract the hidden state of the last prompt token.
+        3. Return it through the pooling output pipeline.
+        4. Skip logits computation and token sampling.
+
+    This is useful for using generative models as embedding models.
+    Set max_tokens=0 when using this flag."""
     # `list[LogitsProcessor] | None` type. We use Any here because
     # `list[LogitsProcessor] | None` type is not supported by msgspec.
     logits_processors: Any | None = None
@@ -280,6 +291,7 @@ class SamplingParams(
         detokenize: bool = True,
         skip_special_tokens: bool = True,
         spaces_between_special_tokens: bool = True,
+        extract_hidden_states: bool = False,
         logits_processors: list[LogitsProcessor] | None = None,
         truncate_prompt_tokens: Annotated[int, msgspec.Meta(ge=-1)] | None = None,
         output_kind: RequestOutputKind = RequestOutputKind.CUMULATIVE,
@@ -332,6 +344,7 @@ class SamplingParams(
             detokenize=detokenize,
             skip_special_tokens=skip_special_tokens,
             spaces_between_special_tokens=spaces_between_special_tokens,
+            extract_hidden_states=extract_hidden_states,
             logits_processors=logits_processors,
             truncate_prompt_tokens=truncate_prompt_tokens,
             output_kind=output_kind,
@@ -469,8 +482,12 @@ class SamplingParams(
             )
         if not 0.0 <= self.min_p <= 1.0:
             raise ValueError(f"min_p must be in [0, 1], got {self.min_p}.")
-        if self.max_tokens is not None and self.max_tokens < 1:
-            raise ValueError(f"max_tokens must be at least 1, got {self.max_tokens}.")
+        if self.max_tokens is not None and self.max_tokens < 0:
+            raise ValueError(f"max_tokens must be at least 0, got {self.max_tokens}.")
+        if self.max_tokens == 0 and not self.extract_hidden_states:
+            raise ValueError(
+                "max_tokens=0 is only valid when extract_hidden_states=True."
+            )
         if self.min_tokens < 0:
             raise ValueError(
                 f"min_tokens must be greater than or equal to 0, got {self.min_tokens}."
@@ -647,6 +664,7 @@ class SamplingParams(
             f"skip_special_tokens={self.skip_special_tokens}, "
             "spaces_between_special_tokens="
             f"{self.spaces_between_special_tokens}, "
+            f"extract_hidden_states={self.extract_hidden_states}, "
             f"truncate_prompt_tokens={self.truncate_prompt_tokens}, "
             f"structured_outputs={self.structured_outputs}, "
             f"extra_args={self.extra_args})"
