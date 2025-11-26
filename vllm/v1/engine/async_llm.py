@@ -425,7 +425,9 @@ class AsyncLLM(EngineClient):
                 # Note: both OutputProcessor and EngineCore handle their
                 # own request cleanup based on finished.
                 finished = out.finished
-                assert isinstance(out, RequestOutput)
+                # assert isinstance(out, RequestOutput) <- disabled!
+                # Output can be RequestOutput or PoolingRequestOutput
+                # (when extract_hidden_states=True)
                 yield out
 
         # If the request is disconnected by the client, generate()
