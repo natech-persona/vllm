@@ -56,10 +56,10 @@ def check_stop(
     # Handle extract_hidden_states mode: finish immediately when pooler output is ready
     if getattr(sampling_params, "extract_hidden_states", False):
         logger = init_logger(__name__)
-        logger.warning(f"[DEBUG] extract_hidden_states check: pooler_output={pooler_output is not None}, req_id={request.request_id}")
+        # logger.warning(f"[DEBUG] extract_hidden_states check: pooler_output={pooler_output is not None}, req_id={request.request_id}")
         if pooler_output is not None:
             request.status = RequestStatus.FINISHED_STOPPED
-            logger.warning(f"[DEBUG] Marking request {request.request_id} as FINISHED_STOPPED")
+            # logger.warning(f"[DEBUG] Marking request {request.request_id} as FINISHED_STOPPED")
             return True
         return False
 

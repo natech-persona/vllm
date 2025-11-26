@@ -2879,14 +2879,14 @@ class GPUModelRunner(
                     return output
 
                 if self._should_extract_hidden_states():
-                    logger.warning(f"[DEBUG model_runner] extract_hidden_states triggered, num_reqs={self.input_batch.num_reqs}")
+                    # logger.warning(f"[DEBUG model_runner] extract_hidden_states triggered, num_reqs={self.input_batch.num_reqs}")
                     output = self._extract_hidden_states_as_pooling(
                         hidden_states,
                         logits_indices,
                         num_scheduled_tokens,
                         num_scheduled_tokens_np,
                     )
-                    logger.warning(f"[DEBUG model_runner] returning pooler_output with {len(output.pooler_output)} items")
+                    # logger.warning(f"[DEBUG model_runner] returning pooler_output with {len(output.pooler_output)} items")
                     output.kv_connector_output = kv_connector_output
                     return output
 
