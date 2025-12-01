@@ -612,6 +612,8 @@ class ModelConfig:
             generate_converts = _RUNNER_CONVERTS["generate"]
             if self.convert_type not in generate_converts:
                 # Currently we don't have any converters for generative models
+                # raise ValueError(
+                #     "This model does not support `--runner generate`.")
                 # Allow pooling models to run in generate mode when
                 # extract_hidden_states is used (hacky override).
                 warnings.warn(
